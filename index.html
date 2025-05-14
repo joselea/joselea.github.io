@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edge Translation API Benchmark</title>
+  <style>
+    :root {
+      --primary-color: #00a1e0;
+      --secondary-color: #64d1f5;
+      --background-dark: #0a1016;
+      --background-light: #f5f7fa;
+      --text-dark: #0a1016;
+      --text-light: #f5f7fa;
+      --panel-dark: #14202c;
+      --panel-light: #ffffff;
+      --accent-color: #ff5722;
+      --success-color: #4caf50;
+      --warning-color: #ff9800;
+      --border-radius: 8px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
+      --glow: 0 0 15px rgba(0, 161, 224, 0.5);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--background-light);
+      color: var(--text-dark);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    body.dark-mode {
+      background-color: var(--background-dark);
+      color: var(--text-light);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-weight: 300;
+      font-size: 2.5rem;
+      margin: 0;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .theme-toggle {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background-color: var(--panel-dark);
+      border-radius: 30px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .theme-toggle::after {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background-color: var(--primary-color);
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.3s, background-color 0.3s;
+    }
+
+    body.dark-mode .theme-toggle::after {
+      transform: translateX(30px);
+    }
+
+    .panel {
+      background-color: var(--panel-light);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow);
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+
+    body.dark-mode .panel {
+      background-color: var(--panel-dark);
+      box-shadow: var(--glow);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(125,125,125,0.2);
+      padding-bottom: 0.75rem;
+    }
+
+    .panel-title {
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: var(--primary-color);
+      margin: 0;
+    }
+
+    .translator-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.8;
+    }
+
+    select, input, button {
+      padding: 0.75rem;
+      border-radius: var(--border-radius);
+      border: 1px solid rgba(125,125,125,0.2);
+      background-color: transparent;
+      color: inherit;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(0, 161, 224, 0.2);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      font-weight: 500;
+      border: none;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background-color: var(--secondary-color);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      flex: 1;
+      min-width: 150px;
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      background-color: rgba(0, 161, 224, 0.1);
+      text-align: center;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 300;
+      margin: 0.5rem 0;
+      color: var(--primary-color);
+    }
+
+    .metric-label {
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      overflow: hidden;
+      border-radius: var(--border-radius);
+    }
+
+    thead {
+      background-color: rgba(0, 161, 224, 0.1);
+    }
+
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(125,125,125,0.1);
+    }
+
+    th {
+      font-weight: 500;
+    }
+
+    tbody tr {
+      transition: background-color 0.2s;
+    }
+
+    tbody tr:hover {
+      background-color: rgba(0, 161, 224, 0.05);
+    }
+
+    .progress-container {
+      height: 5px;
+      background-color: rgba(125,125,125,0.1);
+      border-radius: 5px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: var(--primary-color);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* Loading animation */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(0, 161, 224, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary-color);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .metrics {
+        flex-direction: column;
+      }
+      
+      .metric-card {
+        width: 100%;
+      }
+      
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+
+    /* Hexagonal grid background for dark mode */
+    body.dark-mode::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath fill='%231a3045' fill-opacity='0.08' d='M50 0L87 25v50L50 100 13 75V25z'/%3E%3C/svg%3E");
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Edge Translation API Benchmark</h1>
+      <div class="theme-toggle" id="themeToggle"></div>
+    </header>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Initialization Benchmark</h2>
+      </div>
+      <div class="translator-options">
+        <div class="control-group">
+          <label for="sourceLanguage">Source Language</label>
+          <select id="sourceLanguage">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="ja">Japanese</option>
+            <option value="zh">Chinese</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="targetLanguage">Target Language</label>
+          <select id="targetLanguage">
+            <option value="es">Spanish</option>
+            <option value="en">English</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="ja">Japanese</option>
+            <option value="zh">Chinese</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>&nbsp;</label>
+          <button id="btnInitialize">Initialize Translator</button>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Initialization Time</div>
+          <div class="metric-value" id="initTime">-</div>
+          <div class="metric-label">milliseconds</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Status</div>
+          <div class="metric-value" id="initStatus">Not Started</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Single Translation Benchmark</h2>
+      </div>
+      <div class="translator-options">
+        <div class="control-group">
+          <label for="sampleSize">Sample Size</label>
+          <select id="sampleSize">
+            <option value="1">1 word</option>
+            <option value="10">10 characters</option>
+            <option value="50">50 characters</option>
+            <option value="100">100 characters</option>
+            <option value="200">200 characters</option>
+            <option value="500">500 characters</option>
+            <option value="1000">1000 characters</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>&nbsp;</label>
+          <button id="btnTranslate">Run Translation</button>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Translation Time</div>
+          <div class="metric-value" id="translationTime">-</div>
+          <div class="metric-label">milliseconds</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Characters</div>
+          <div class="metric-value" id="charCount">-</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Characters per Second</div>
+          <div class="metric-value" id="charsPerSecond">-</div>
+        </div>
+      </div>
+      <div>
+        <label for="sourceText">Source Text</label>
+        <textarea id="sourceText" rows="4" style="width: 100%; margin-bottom: 1rem; padding: 0.75rem; border-radius: var(--border-radius); border: 1px solid rgba(125,125,125,0.2);" placeholder="Enter text to translate or select a sample size above"></textarea>
+        <label for="translatedText">Translated Text</label>
+        <textarea id="translatedText" rows="4" style="width: 100%; margin-bottom: 1rem; padding: 0.75rem; border-radius: var(--border-radius); border: 1px solid rgba(125,125,125,0.2);" placeholder="Translation will appear here" readonly></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Batch Translation Benchmark</h2>
+      </div>
+      <div class="translator-options">
+        <div class="control-group">
+          <button id="btnRunBatch">Run Batch Benchmark</button>
+        </div>
+        <div class="control-group">
+          <button id="btnClearBatch">Clear Results</button>
+        </div>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar" id="batchProgress"></div>
+      </div>
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Average Time</div>
+          <div class="metric-value" id="avgBatchTime">-</div>
+          <div class="metric-label">milliseconds</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Time</div>
+          <div class="metric-value" id="totalBatchTime">-</div>
+          <div class="metric-label">milliseconds</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Status</div>
+          <div class="metric-value" id="batchStatus">Not Started</div>
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Source Text</th>
+              <th>Character Length</th>
+              <th>Translation</th>
+              <th>Time (ms)</th>
+            </tr>
+          </thead>
+          <tbody id="batchResults">
+            <!-- Results will be populated here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample texts of different lengths for the benchmark
+    const sampleTexts = {
+      '1': 'Hello',
+      '10': 'Good day!',
+      '50': 'The quick brown fox jumps over the lazy dog near the river.',
+      '100': 'The quick brown fox jumps over the lazy dog. The five boxing wizards jump quickly. A mad boxer shot a quick, gloved jab to the jaw.',
+      '200': 'The quick brown fox jumps over the lazy dog. The five boxing wizards jump quickly. A mad boxer shot a quick, gloved jab to the jaw. How vexingly quick daft zebras jump! Pack my box with five dozen liquor jugs. We promptly judged antique ivory buckles for the next prize.',
+      '500': 'The quick brown fox jumps over the lazy dog. The five boxing wizards jump quickly. A mad boxer shot a quick, gloved jab to the jaw. How vexingly quick daft zebras jump! Pack my box with five dozen liquor jugs. We promptly judged antique ivory buckles for the next prize. Crazy Fredrick bought many very exquisite opal jewels. Jaded zombies acted quaintly but kept driving their oxen forward. The job requires extra pluck and zeal from every young wage earner. A quart jar of oil mixed with zinc oxide makes a very bright paint. Jack quietly moved up front and seized the big ball of wax. All questions asked by five watched experts amaze the judge.',
+      '1000': 'The quick brown fox jumps over the lazy dog. The five boxing wizards jump quickly. A mad boxer shot a quick, gloved jab to the jaw. How vexingly quick daft zebras jump! Pack my box with five dozen liquor jugs. We promptly judged antique ivory buckles for the next prize. Crazy Fredrick bought many very exquisite opal jewels. Jaded zombies acted quaintly but kept driving their oxen forward. The job requires extra pluck and zeal from every young wage earner. A quart jar of oil mixed with zinc oxide makes a very bright paint. Jack quietly moved up front and seized the big ball of wax. All questions asked by five watched experts amaze the judge. The wizard quickly jinxed the gnomes before they vaporized. A few black taxis drove up major roads on quiet hazy nights. Just keep examining every low bid quoted for zinc etchings. A mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent. The explorer was frozen in his big kayak just after making queer discoveries. Six big devils from Japan quickly forgot how to waltz. A quick movement of the enemy will jeopardize five gunboats. The exodus of jazzy pigeons is craved by squeamish walkers. The jukebox music puzzled a gentle visitor from a quaint valley town.'
+    };
+
+    // 50 sample sentences for batch testing, each approximately 150 characters
+    const batchSentences = [
+      "The quick brown fox jumps over the lazy dog. The five boxing wizards jump quickly. A mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent.",
+      "How vexingly quick daft zebras jump! Pack my box with five dozen liquor jugs. We promptly judged antique ivory buckles for the next prize.",
+      "Crazy Fredrick bought many very exquisite opal jewels. Jaded zombies acted quaintly but kept driving their oxen forward.",
+      "The job requires extra pluck and zeal from every young wage earner. A quart jar of oil mixed with zinc oxide makes a very bright paint.",
+      "Jack quietly moved up front and seized the big ball of wax. All questions asked by five watched experts amaze the judge.",
+      "The wizard quickly jinxed the gnomes before they vaporized. A few black taxis drove up major roads on quiet hazy nights.",
+      "Just keep examining every low bid quoted for zinc etchings. The explorer was frozen in his big kayak just after making queer discoveries.",
+      "Six big devils from Japan quickly forgot how to waltz. A quick movement of the enemy will jeopardize five gunboats.",
+      "The exodus of jazzy pigeons is craved by squeamish walkers. The jukebox music puzzled a gentle visitor from a quaint valley town.",
+      "We have never been to Asia, nor have we visited Africa. Flying fish flew by the space station. She always speaks to him in a loud voice.",
+      "The mysterious diary records the voice. The memory we used to share is no longer coherent. The team members were hard to tell apart since they all wore their hair in a ponytail.",
+      "She works two jobs to make ends meet; at least, that was her reason for not having time to join us. The sky is clear; the stars are twinkling.",
+      "Everyone was busy, so I went to the movie alone. I am happy to take your donation; any amount will be greatly appreciated.",
+      "I checked to make sure that he was still alive. She only paints with bold colors; she does not like pastels.",
+      "He turned in the research paper on Friday; otherwise, he would have not passed the class. I want to buy a onesie but know it won't suit me.",
+      "I love eating toasted cheese and tuna sandwiches. I really want to go to work, but I am too sick to drive.",
+      "If the Easter Bunny and the Tooth Fairy had babies would they take your teeth and leave chocolate for you?",
+      "He enjoys practicing his violin often. He is good at eating pickles and telling women about his emotional problems.",
+      "If you like tuna and tomato sauce, try combining the two, it's really not as bad as it sounds. I often see the time 11:11 or 12:34 on clocks.",
+      "Writing a list of random sentences is harder than I initially thought it would be. A song can make or ruin a person's day if they let it get to them.",
+      "I currently have 4 windows open up, and I don't know why. Sometimes, all you need to do is completely make an ass of yourself and laugh it off to realize that life isn't so bad after all.",
+      "I'd rather be a bird than a fish. The waves were crashing on the shore; it was a lovely sight.",
+      "I will never be this young again. Ever. Oh damn… I just got older. As the rental car rolled to a stop on the dark road, her fear increased by the moment.",
+      "She borrowed the book from him many years ago and hasn't yet returned it. Italy is my favorite country; in fact, I plan to spend two weeks there next year.",
+      "The book is in front of the table. Please wait outside of the house. When I was little I had a car door slammed shut on my hand.",
+      "The lake is a long way from here. I think I will buy the red car, or I will lease the blue one. My Mum tries to be cool by saying that she likes all the same things that I do.",
+      "When I was little I had a car door slammed shut on my hand. I now push all doors open with my foot. Car safety is important.",
+      "I was very proud of my nickname throughout high school but today I couldn't be any different to what my nickname was.",
+      "She wrote him a long letter, but he didn't read it. The river stole the gods. Where do random thoughts come from?",
+      "The stranger officiates the meal. She did not cheat on the test, for it was not the right thing to do.",
+      "It was getting dark, and we weren't there yet. He said he was not there yesterday; however, many people saw him there.",
+      "I'll have you know I've written over 1000 novels in the past year. We need to rent a room for our party. Let me help you with your baggage.",
+      "The quick brown fox jumps over the lazy dog. The machinery is made of magnesium alloy. The warranty does not cover damage caused by natural disasters.",
+      "The ocean waves were crashing against the shoreline, creating a soothing rhythm. The detective examined the fingerprints on the glass with a magnifying lens.",
+      "The chef prepared a delicious meal with fresh ingredients from the local market. The artist mixed various colors on the palette to create the perfect hue.",
+      "The ancient ruins reveal insights into a civilization that flourished thousands of years ago. The scientist conducted experiments to test the new theory.",
+      "The committee will meet next week to discuss the proposed changes to the policy. The astronaut described the breathtaking view of Earth from space.",
+      "The lawyer presented compelling evidence that convinced the jury of his client's innocence. The gardener planted various types of flowers to attract butterflies.",
+      "The pianist's fingers danced across the keys, producing a beautiful melody. The novel was acclaimed for its complex characters and intricate plot.",
+      "The documentary highlighted environmental issues affecting coastal communities. The professor explained the concept using diagrams and real-world examples.",
+      "The architect designed a sustainable building that harmonizes with its natural surroundings. The journalist interviewed witnesses to gather information for the article.",
+      "The exhibition features artwork from emerging artists across the country. The coach developed a strategic plan to improve the team's performance.",
+      "The summit brought together leaders from various countries to discuss climate change. The nutritionist recommended a balanced diet rich in vegetables and lean protein.",
+      "The museum curator carefully preserved the ancient artifacts. The company implemented new policies to reduce its carbon footprint.",
+      "The ceremony honored individuals who had made significant contributions to the community. The photographer captured stunning landscapes during the expedition.",
+      "The bridge construction project will be completed ahead of schedule. The software update includes features that enhance user experience and security.",
+      "The restaurant specializes in traditional recipes passed down through generations. The ballet dancer performed with grace and precision, captivating the audience.",
+      "The vaccine has been proven effective in preventing the spread of the disease. The workshop provided valuable insights into creative writing techniques.",
+    ];
+
+    // Global variables
+    let translator = null;
+    let isInitialized = false;
+
+    // DOM elements
+    const sourceLanguageSelect = document.getElementById('sourceLanguage');
+    const targetLanguageSelect = document.getElementById('targetLanguage');
+    const btnInitialize = document.getElementById('btnInitialize');
+    const initTimeElement = document.getElementById('initTime');
+    const initStatusElement = document.getElementById('initStatus');
+    const sampleSizeSelect = document.getElementById('sampleSize');
+    const sourceTextArea = document.getElementById('sourceText');
+    const translatedTextArea = document.getElementById('translatedText');
+    const btnTranslate = document.getElementById('btnTranslate');
+    const translationTimeElement = document.getElementById('translationTime');
+    const charCountElement = document.getElementById('charCount');
+    const charsPerSecondElement = document.getElementById('charsPerSecond');
+    const btnRunBatch = document.getElementById('btnRunBatch');
+    const btnClearBatch = document.getElementById('btnClearBatch');
+    const batchResultsElement = document.getElementById('batchResults');
+    const batchProgressElement = document.getElementById('batchProgress');
+    const avgBatchTimeElement = document.getElementById('avgBatchTime');
+    const totalBatchTimeElement = document.getElementById('totalBatchTime');
+    const batchStatusElement = document.getElementById('batchStatus');
+    const themeToggle = document.getElementById('themeToggle');
+
+    // Theme toggle
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    });
+
+    // Check for saved theme preference
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark-mode');
+    }
+
+    // Update sourceText when sample size changes
+    sampleSizeSelect.addEventListener('change', () => {
+      const size = sampleSizeSelect.value;
+      sourceTextArea.value = sampleTexts[size] || '';
+    });
+
+    // Initialize translator
+    btnInitialize.addEventListener('click', async () => {
+      try {
+        initStatusElement.textContent = 'Initializing...';
+        initTimeElement.textContent = '-';
+        
+        const sourceLanguage = sourceLanguageSelect.value;
+        const targetLanguage = targetLanguageSelect.value;
+        
+        const startTime = performance.now();
+        
+        // Check if Translator API is available
+        if (typeof Translator === 'undefined') {
+          throw new Error('Translator API is not available in this browser');
+        }
+        
+        translator = await Translator.create({
+          sourceLanguage,
+          targetLanguage,
+          monitor(m) {
+            m.addEventListener('downloadprogress', e => {
+              const percent = Math.round(e.loaded * 100);
+              initStatusElement.textContent = `Downloading: ${percent}%`;
+            });
+          }
+        });
+        
+        const endTime = performance.now();
+        const elapsedTime = endTime - startTime;
+        
+        initTimeElement.textContent = elapsedTime.toFixed(2);
+        initStatusElement.textContent = 'Initialized';
+        isInitialized = true;
+        
+        // Set a sample text
+        if (!sourceTextArea.value) {
+          sampleSizeSelect.value = '50';
+          sourceTextArea.value = sampleTexts['50'];
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+        initStatusElement.textContent = 'Error: ' + error.message;
+        // Simulate translator for demo purposes if API not available
+        simulateTranslatorForDemo(sourceLanguageSelect.value, targetLanguageSelect.value);
+      }
+    });
+
+    // Create a demo translator for testing when real API is not available
+    function simulateTranslatorForDemo(sourceLanguage, targetLanguage) {
+      console.log('Creating simulated translator for demo');
+      translator = {
+        translate: async (text) => {
+          await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
+          return `[${targetLanguage}] ` + text;
+        }
+      };
+      isInitialized = true;
+    }
+
+    // Translate button click
+    btnTranslate.addEventListener('click', async () => {
+      if (!isInitialized) {
+        alert('Please initialize the translator first');
+        return;
+      }
+      
+      const sourceText = sourceTextArea.value.trim();
+      if (!sourceText) {
+        alert('Please enter text to translate');
+        return;
+      }
+      
+      translationTimeElement.textContent = 'Translating...';
+      charCountElement.textContent = sourceText.length;
+      charsPerSecondElement.textContent = '-';
+      
+      try {
+        const startTime = performance.now();
+        const translatedText = await translator.translate(sourceText);
+        const endTime = performance.now();
+        
+        const elapsedTime = endTime - startTime;
+        const charsPerSecond = (sourceText.length / (elapsedTime / 1000)).toFixed(2);
+        
+        translatedTextArea.value = translatedText;
+        translationTimeElement.textContent = elapsedTime.toFixed(2);
+        charsPerSecondElement.textContent = charsPerSecond;
+      } catch (error) {
+        console.error('Translation error:', error);
+        translatedTextArea.value = 'Error: ' + error.message;
+        translationTimeElement.textContent = 'Error';
+      }
+    });
+
+    // Run batch benchmark
+    btnRunBatch.addEventListener('click', async () => {
+      if (!isInitialized) {
+        alert('Please initialize the translator first');
+        return;
+      }
+      
+      batchStatusElement.textContent = 'Running...';
+      batchProgressElement.style.width = '0%';
+      
+      const results = [];
+      const totalSentences = batchSentences.length;
+      let totalTime = 0;
+      
+      for (let i = 0; i < totalSentences; i++) {
+        const sentence = batchSentences[i];
+        const charLength = sentence.length;
+        
+        try {
+          const startTime = performance.now();
+          const translation = await translator.translate(sentence);
+          const endTime = performance.now();
+          
+          const elapsedTime = endTime - startTime;
+          totalTime += elapsedTime;
+          
+          results.push({
+            index: i + 1,
+            sourceText: sentence,
+            charLength,
+            translation,
+            time: elapsedTime.toFixed(2)
+          });
+          
+          // Update progress
+          const progress = ((i + 1) / totalSentences) * 100;
+          batchProgressElement.style.width = `${progress}%`;
+          
+          // Update average time
+          const avgTime = totalTime / (i + 1);
+          avgBatchTimeElement.textContent = avgTime.toFixed(2);
+          totalBatchTimeElement.textContent = totalTime.toFixed(2);
+          
+          // Update table with new row
+          updateBatchResultRow(results[i]);
+          
+          // Small delay to prevent UI freezing
+          await new Promise(resolve => setTimeout(resolve, 10));
+        } catch (error) {
+          console.error('Batch translation error:', error);
+          results.push({
+            index: i + 1,
+            sourceText: sentence,
+            charLength,
+            translation: 'Error: ' + error.message,
+            time: 'Error'
+          });
+          updateBatchResultRow(results[i]);
+        }
+      }
+      
+      batchStatusElement.textContent = 'Completed';
+      batchProgressElement.style.width = '100%';
+      
+      // Calculate final stats
+      const avgTime = totalTime / totalSentences;
+      avgBatchTimeElement.textContent = avgTime.toFixed(2);
+      totalBatchTimeElement.textContent = totalTime.toFixed(2);
+    });
+
+    // Update a single row in the batch results table
+    function updateBatchResultRow(result) {
+      let row = document.getElementById(`batch-row-${result.index}`);
+      
+      if (!row) {
+        row = document.createElement('tr');
+        row.id = `batch-row-${result.index}`;
+        batchResultsElement.appendChild(row);
+      }
+      
+      row.innerHTML = `
+        <td>${result.index}</td>
+        <td>${truncateText(result.sourceText, 30)}</td>
+        <td>${result.charLength}</td>
+        <td>${truncateText(result.translation, 30)}</td>
+        <td>${result.time}</td>
+      `;
+      
+      row.classList.add('fade-in');
+      setTimeout(() => row.classList.remove('fade-in'), 500);
+    }
+
+    // Clear batch results
+    btnClearBatch.addEventListener('click', () => {
+      batchResultsElement.innerHTML = '';
+      batchProgressElement.style.width = '0%';
+      avgBatchTimeElement.textContent = '-';
+      totalBatchTimeElement.textContent = '-';
+      batchStatusElement.textContent = 'Not Started';
+    });
+
+    // Helper to truncate text for display
+    function truncateText(text, maxLength) {
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    }
+
+    // Initialize with a sample text
+    sampleSizeSelect.value = '50';
+    sourceTextArea.value = sampleTexts['50'];
+
+    // Populate batch table with empty rows for better UX
+    function populateEmptyBatchTable() {
+      batchResultsElement.innerHTML = '';
+      for (let i = 0; i < batchSentences.length; i++) {
+        const row = document.createElement('tr');
+        row.id = `batch-row-${i + 1}`;
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${truncateText(batchSentences[i], 30)}</td>
+          <td>${batchSentences[i].length}</td>
+          <td>-</td>
+          <td>-</td>
+        `;
+        batchResultsElement.appendChild(row);
+      }
+    }
+
+    // Run on page load
+    populateEmptyBatchTable();
+  </script>
+</body>
+</html>

@@ -773,13 +773,14 @@
         row.id = `batch-row-${i + 1}`;
         row.innerHTML = `
           <td>${i + 1}</td>
-          <td>${truncateText(batchSentences[i], 30)}</td>
+          <td>${batchSentences[i]}</td>
           <td>${batchSentences[i].length}</td>
           <td>-</td>
           <td>-</td>
         `;
         batchResultsElement.appendChild(row);
       }
+      console.table(batchSentences);
     }
 
     // Run on page load

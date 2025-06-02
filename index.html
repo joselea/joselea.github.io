@@ -736,14 +736,16 @@
       
       row.innerHTML = `
         <td>${result.index}</td>
-        <td>${truncateText(result.sourceText, 30)}</td>
+        <td>${result.sourceText}</td>
         <td>${result.charLength}</td>
-        <td>${truncateText(result.translation, 30)}</td>
+        <td>${result.translation}</td>
         <td>${result.time}</td>
       `;
       
       row.classList.add('fade-in');
       setTimeout(() => row.classList.remove('fade-in'), 500);
+
+      console.log(result.sourceText, ",", result.translation);
     }
 
     // Clear batch results
@@ -780,7 +782,7 @@
         `;
         batchResultsElement.appendChild(row);
       }
-      console.table(batchSentences);
+      // console.table(batchSentences);
     }
 
     // Run on page load

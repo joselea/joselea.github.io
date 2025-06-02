@@ -289,6 +289,65 @@
       }
     }
 
+    /* Copy button styles */
+    .copy-button {
+      background-color: transparent;
+      border: 1px solid var(--primary-color);
+      color: var(--primary-color);
+      padding: 0.5rem;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .copy-button:hover {
+      background-color: var(--primary-color);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    .copy-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Tooltip styles */
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--text-dark);
+      color: var(--text-light);
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+    }
+
+    body.dark-mode .tooltip::after {
+      background-color: var(--text-light);
+      color: var(--text-dark);
+    }
+
     /* Hexagonal grid background for dark mode */
     body.dark-mode::before {
       content: '';
@@ -404,6 +463,13 @@
     <div class="panel">
       <div class="panel-header">
         <h2 class="panel-title">Batch Translation Benchmark</h2>
+        <button id="btnCopyCSV" class="copy-button tooltip" data-tooltip="Copy results as CSV">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy CSV
+        </button>
       </div>
       <div class="translator-options">
         <div class="control-group">
@@ -542,6 +608,7 @@
     const totalBatchTimeElement = document.getElementById('totalBatchTime');
     const batchStatusElement = document.getElementById('batchStatus');
     const themeToggle = document.getElementById('themeToggle');
+    const btnCopyCSV = document.getElementById('btnCopyCSV');
 
     // Theme toggle
     themeToggle.addEventListener('click', () => {
@@ -755,6 +822,58 @@
       avgBatchTimeElement.textContent = '-';
       totalBatchTimeElement.textContent = '-';
       batchStatusElement.textContent = 'Not Started';
+    });
+
+    // Copy CSV functionality
+    btnCopyCSV.addEventListener('click', () => {
+      try {
+        // Get all rows from the batch results table
+        const rows = batchResultsElement.querySelectorAll('tr');
+        
+        if (rows.length === 0) {
+          alert('No translation results to copy. Please run the batch benchmark first.');
+          return;
+        }
+        
+        // Create CSV content
+        let csvContent = 'Source Text,Translation\n';
+        
+        rows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          if (cells.length >= 4) {
+            const sourceText = cells[1].textContent.trim();
+            const translation = cells[3].textContent.trim();
+            
+            // Escape quotes and wrap in quotes if needed
+            const escapedSource = `"${sourceText.replace(/"/g, '""')}"`;
+            const escapedTranslation = `"${translation.replace(/"/g, '""')}"`;
+            
+            csvContent += `${escapedSource},${escapedTranslation}\n`;
+          }
+        });
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(csvContent).then(() => {
+          // Temporarily change button text to show success
+          const originalText = btnCopyCSV.innerHTML;
+          btnCopyCSV.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20,6 9,17 4,12"></polyline>
+            </svg>
+            Copied!
+          `;
+          
+          setTimeout(() => {
+            btnCopyCSV.innerHTML = originalText;
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy to clipboard:', err);
+          alert('Failed to copy to clipboard. Please try again.');
+        });
+      } catch (error) {
+        console.error('Error copying CSV:', error);
+        alert('Error copying CSV. Please try again.');
+      }
     });
 
     // Helper to truncate text for display
